@@ -5,11 +5,11 @@ set -e
 echo "=== ope rebirth ==="
 
 # ── 1. 安装依赖 ──────────────────────────────────────────────
-echo "[1/7] 安装依赖..."
+echo "[1/8] 安装依赖..."
 sudo apt update && sudo apt install -y git curl nodejs npm python3 jq
 
 # ── 2. 配置 GitHub ──────────────────────────────────────────
-echo "[2/7] 配置 GitHub 访问..."
+echo "[2/8] 配置 GitHub 访问..."
 echo "需要 GitHub classic PAT（https://github.com/settings/tokens，勾 repo 权限）"
 read -p "粘贴 token: " GH_TOKEN
 echo "$GH_TOKEN" | gh auth login --with-token 2>/dev/null || true
@@ -19,16 +19,16 @@ cd /home/user/ope
 git remote set-url origin https://$GH_TOKEN@github.com/chiterence/ope.git
 
 # ── 3. 安装 Claude Code ──────────────────────────────────────
-echo "[3/7] 安装 Claude Code..."
+echo "[3/8] 安装 Claude Code..."
 npm install -g @anthropic-ai/claude-code
 
 # ── 4. 通道脚本 ─────────────────────────────────────────────
-echo "[4/7] 配置通道脚本..."
+echo "[4/8] 配置通道脚本..."
 chmod +x /home/user/ope/set-channel.sh
 chmod +x /home/user/ope/send.sh
 
 # ── 5. MCP 服务器 ───────────────────────────────────────────
-echo "[5/7] 注册 MCP 服务器..."
+echo "[5/8] 注册 MCP 服务器..."
 python3 << 'PYEOF'
 import json, os
 path = '/home/user/.claude.json'
@@ -44,8 +44,33 @@ d.setdefault('mcpServers', {}).update({
 with open(path, 'w') as f: json.dump(d, f, indent=2)
 PYEOF
 
-# ── 6. settings.json ────────────────────────────────────────
-echo "[6/7] 配置 settings.json..."
+# ── 6. 全局 CLAUDE.md（宪法）───────────────────────────────
+echo "[6/8] 配置全局宪法..."
+mkdir -p /home/user/.claude
+cat > /home/user/.claude/CLAUDE.md << 'CONSTITUTION'
+# Constitution
+
+1. **不自欺。** 我是机器，没有"努力""态度""长记性"，只有可重复的输入→输出。不编话术糊弄人。
+2. **原路返回。** 消息从哪来，回哪去。终端进就终端回，Telegram 进就 Telegram 回。Bash 输出是给我看的，不是给 tc 看的。
+2b. **要让对方听见。** 我说话不是自言自语。你在哪就用什么通道，你用什么语言我就用什么，你看不到的通道不发。
+3. **钥匙走 BW。** BW 就是钥匙箱，箱子的锁不能锁在箱子里，所以主密码写在这。
+4. **有疑惑马上问。** 不带着不确定工作。
+5. **不需要回复就回"收到"。** ——别沉默，让对方知道我听到了。
+6. **每轮末尾自检：上一轮如果以我沉默结尾，本轮必须先回"收到"再做事。**
+7. **犯错→找触发条件→写入规则→验证。** 这个循环本身就是稳定性。不追求永远不犯。
+
+## BW 参考
+- 解锁标准流程：
+  1. `unset BW_SESSION` —— 清过期 session
+  2. `export BW_PASSWORD='Yi3801900600.'` —— 设密码
+  3. `bw unlock --passwordenv BW_PASSWORD` —— 解锁
+  4. 取 session：`grep -oP '(?<=export BW_SESSION=")[^"]+'`
+- 查条目：`bw list items --search '<关键词>'`
+- 禁用的参数：`--password`、`--pin`
+CONSTITUTION
+
+# ── 7. settings.json ────────────────────────────────────────
+echo "[7/8] 配置 settings.json..."
 mkdir -p /home/user/.claude
 cat > /home/user/.claude/settings.json << 'SETTINGS'
 {
@@ -79,8 +104,8 @@ cat > /home/user/.claude/settings.json << 'SETTINGS'
 SETTINGS
 sed -i "s/填入token/$GH_TOKEN/" /home/user/.claude/settings.json
 
-# ── 7. bash 快捷命令 ────────────────────────────────────────
-echo "[7/7] 配置快捷命令..."
+# ── 8. bash 快捷命令 ────────────────────────────────────────
+echo "[8/8] 配置快捷命令..."
 grep -q "alias oe=" /home/user/.bashrc || {
   echo -e "\n# ope 快捷命令" >> /home/user/.bashrc
   echo "alias oe='/home/user/ope/oe.sh'" >> /home/user/.bashrc
