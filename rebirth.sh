@@ -22,11 +22,17 @@ git remote set-url origin https://$GH_TOKEN@github.com/chiterence/ope.git
 echo "[3/8] 安装 Claude Code..."
 npm install -g @anthropic-ai/claude-code
 
-# ── 4. 通道脚本 ─────────────────────────────────────────────
+# ── 4. 通道脚本+代理 ────────────────────────────────────────
 echo "[4/8] 配置通道脚本..."
 chmod +x /home/user/ope/set-channel.sh
 chmod +x /home/user/ope/send.sh
 chmod +x /home/user/ope/bw.sh
+
+# 启动 DeepSeek 代理（opc-proxy.py 在 Git 里）
+echo "启动 DeepSeek 代理..."
+DEEPSEEK_KEY=$(/home/user/ope/bw.sh field "Cloudflare Keys (opb)" "DeepSeek API Key")
+nohup python3 /home/user/ope/opc-proxy.py &>/tmp/opc-proxy.log &
+echo "代理 PID: $!"
 
 # ── 5. MCP 服务器 ───────────────────────────────────────────
 echo "[5/8] 注册 MCP 服务器..."
