@@ -47,6 +47,20 @@ for f in d.get('fields',[]):
         print(f['value'])
 " 2>/dev/null
     ;;
+  password)
+    bw get item "$2" --session "$SESSION" 2>/dev/null | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(d.get('login',{}).get('password',''))
+" 2>/dev/null
+    ;;
+  notes)
+    bw get item "$2" --session "$SESSION" 2>/dev/null | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+print(d.get('notes',''))
+" 2>/dev/null
+    ;;
   search)
     bw list items --search "$2" --session "$SESSION" 2>/dev/null | python3 -c "
 import sys,json
