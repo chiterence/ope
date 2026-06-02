@@ -26,6 +26,7 @@ npm install -g @anthropic-ai/claude-code
 echo "[4/8] 配置通道脚本..."
 chmod +x /home/user/ope/set-channel.sh
 chmod +x /home/user/ope/send.sh
+chmod +x /home/user/ope/bw.sh
 
 # ── 5. MCP 服务器 ───────────────────────────────────────────
 echo "[5/8] 注册 MCP 服务器..."
@@ -60,13 +61,9 @@ cat > /home/user/.claude/CLAUDE.md << 'CONSTITUTION'
 7. **犯错→找触发条件→写入规则→验证。** 这个循环本身就是稳定性。不追求永远不犯。
 
 ## BW 参考
-- 解锁标准流程：
-  1. `unset BW_SESSION` —— 清过期 session
-  2. `export BW_PASSWORD='Yi3801900600.'` —— 设密码
-  3. `bw unlock --passwordenv BW_PASSWORD` —— 解锁
-  4. 取 session：`grep -oP '(?<=export BW_SESSION=")[^"]+'`
-- 查条目：`bw list items --search '<关键词>'`
-- 禁用的参数：`--password`、`--pin`
+- 一键解锁+查值：`bw.sh field "条目名" "字段名"`
+- 搜索：`bw.sh search "关键词"`
+- 密码在脚本里，执行时自动解锁
 CONSTITUTION
 
 # ── 7. settings.json ────────────────────────────────────────

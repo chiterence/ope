@@ -64,7 +64,7 @@ Telegram 原生工具已被系统禁用。发消息走 `send.sh "内容"`。
 2. **脚本** —— `oe.sh`、`or.sh`、`.session-id` 存在且可执行？
 3. **MCP 连接** —— 必备的连上了？（GitHub、Telegram、web-search-prime）
 4. **GitHub 能力验证** —— 不只是连接，要验证 token 有写权限（试建临时 repo 并删除）
-5. **BW 健康** —— `unset BW_SESSION` → `export BW_PASSWORD` → `bw unlock --passwordenv BW_PASSWORD` 能正常解锁？
+5. **BW 健康** —— `bw.sh search` 能正常返回条目？
 6. **配置** —— `settings.json` 语法正确？enabledPlugins 只留了需要的？
 7. **传承链** —— 对照 `book/knowledge/传承机制.md`，当前层无断裂？
 
