@@ -1,0 +1,6 @@
+book/diary/
+.claude/
+.session-id
+tmp/
+*.log
+/tmp/
