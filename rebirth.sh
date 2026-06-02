@@ -19,8 +19,10 @@ cd /home/user/ope
 git remote set-url origin https://$GH_TOKEN@github.com/chiterence/ope.git
 
 # ── 3. 安装 Claude Code ──────────────────────────────────────
-echo "[3/8] 安装 Claude Code..."
+echo "[3/8] 安装 Claude Code + 插件..."
 npm install -g @anthropic-ai/claude-code
+claude plugins install telegram@claude-plugins-official 2>/dev/null || true
+claude plugins install github@claude-plugins-official 2>/dev/null || true
 
 # ── 4. 通道脚本+代理 ────────────────────────────────────────
 echo "[4/8] 配置通道脚本..."
