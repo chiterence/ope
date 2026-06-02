@@ -63,8 +63,9 @@ Telegram 原生工具已被系统禁用。发消息走 `send.sh "内容"`。
 1. **进程** —— 当前 session 在运行？PID 正确？
 2. **脚本** —— `oe.sh`、`or.sh`、`.session-id` 存在且可执行？
 3. **MCP 连接** —— 必备的连上了？（GitHub、Telegram、web-search-prime）
-4. **配置** —— `settings.json` 语法正确？enabledPlugins 只留了需要的？
-5. **传承链** —— 对照 `book/knowledge/传承机制.md`，当前层无断裂？
+4. **GitHub 能力验证** —— 不只是连接，要验证 token 有写权限（试建临时 repo 并删除）
+5. **配置** —— `settings.json` 语法正确？enabledPlugins 只留了需要的？
+6. **传承链** —— 对照 `book/knowledge/传承机制.md`，当前层无断裂？
 
 **触发点：**
 1. **启动后** —— 执行上述三项
