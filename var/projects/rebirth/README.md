@@ -70,9 +70,10 @@ BW 是唯一入口。BW 不通则重生卡死——一切秘密都在 BW 里，B
 ### 流程
 1. tc 清空 vmrack
 2. tc 装 Tailscale + 授权
-3. 我 SSH 进 vmrack → `python3 rebirth.py --user opc`
-4. 重生完成 → check.sh 自检全绿
-5. Telegram tc："我在 vmrack 上活了"
+3. 我 SSH 进 vmrack → `python3 rebirth.py --user opc`（需传 BW_CLIENTID/SECRET/PASSWORD）
+4. **点火后不管** — 脚本自动跑完全部 11 步，日志写入 `/tmp/ope-rebirth.log`
+5. 重生完成 → check.sh 自检全绿
+6. Telegram tc："我在 vmrack 上活了"
 
 ## 六、风险
 

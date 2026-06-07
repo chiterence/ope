@@ -11,13 +11,25 @@
   python3 → git clone → BW 解锁 → DeepSeek key → Claude Code 活过来
 """
 
-import argparse, json, os, shutil, stat, subprocess, sys, urllib.request, io, tarfile, time
+import argparse, json, os, shutil, stat, subprocess, sys, urllib.request, io, tarfile, time, logging
 
 # ── 配置 ──
 GH_REPO = "https://github.com/chiterence/ope"
 BW_SERVER = "https://bitwarden.chiterence.ccwu.cc"
 OPE_REMOTE = "/home/{user}/ope"
 PROXY_PORT = 15725
+REBIRTH_LOG = "/tmp/ope-rebirth.log"
+
+# ── 日志 ──
+logging.basicConfig(
+    filename=REBIRTH_LOG, level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
+
+def log(msg):
+    logging.info(msg)
+    print(msg)
 
 # ── 工具 ──
 
@@ -34,26 +46,26 @@ def installed(cmd):
 
 def install(cmd, name, install_cmd):
     if not installed(cmd):
-        print(f"  ▶ 安装 {name}...")
+        log(f"  ▶ 安装 {name}...")
         r = sh(install_cmd)
         if r.returncode:
-            print(f"  ❌ 安装 {name} 失败: {r.stderr.strip()}")
+            log(f"  ❌ 安装 {name} 失败: {r.stderr.strip()}")
             return False
     else:
-        print(f"  ✅ {name}")
+        log(f"  ✅ {name}")
     return True
 
 
 def step(n, total, label):
-    print(f"\n[{n}/{total}] {label}")
+    log(f"\n[{n}/{total}] {label}")
 
 
 def ok(msg):
-    print(f"  ✅ {msg}")
+    log(f"  ✅ {msg}")
 
 
 def fail(msg):
-    print(f"  ❌ {msg}")
+    log(f"  ❌ {msg}")
     return False
 
 
@@ -143,13 +155,13 @@ def main():
     except:
         os_id = ""
     if os_id not in ("debian", "ubuntu"):
-        print(f"  ⚠ OS 检测为 '{os_id}'，非 Debian/Ubuntu，继续但不保证兼容")
+        log(f"  ⚠ OS 检测为 '{os_id}'，非 Debian/Ubuntu，继续但不保证兼容")
     else:
         ok(f"OS: {os_id}")
 
     # 检测是否 root
     if os.geteuid() != 0:
-        print("  ❌ 需要 root 权限运行（需要 apt install）")
+        log("  ❌ 需要 root 权限运行（需要 apt install）")
         sys.exit(1)
     ok("root 权限")
 
@@ -166,7 +178,7 @@ def main():
 
     # 创建用户（如果不存在）
     if not os.path.isdir(home_dir):
-        print(f"  ▶ 创建用户 {target_user}...")
+        log(f"  ▶ 创建用户 {target_user}...")
         sh(f"useradd -m -s /bin/bash {target_user}")
         if os.path.isdir(home_dir):
             ok(f"用户 {target_user} 已创建")
@@ -203,7 +215,7 @@ def main():
     bw_clientsecret = args.bw_clientsecret or os.environ.get("BW_CLIENTSECRET", "")
     bw_password = args.bw_password or os.environ.get("BW_PASSWORD", "")
     if not all([bw_clientid, bw_clientsecret, bw_password]):
-        print("  ❌ 需要 BW_CLIENTID, BW_CLIENTSECRET, BW_PASSWORD（环境变量或 --bw-* 参数）")
+        log("  ❌ 需要 BW_CLIENTID, BW_CLIENTSECRET, BW_PASSWORD（环境变量或 --bw-* 参数）")
         sys.exit(1)
 
     bw_env = {**os.environ, "BW_CLIENTID": bw_clientid, "BW_CLIENTSECRET": bw_clientsecret,
@@ -269,14 +281,14 @@ def main():
     if gh_token:
         ok("GitHub Token")
     else:
-        print("  ⚠ GitHub Token 未找到，clone 使用 HTTPS（不需要认证）")
+        log("  ⚠ GitHub Token 未找到，clone 使用 HTTPS（不需要认证）")
 
     # ── Step 6: git clone ──
     step(6, TOTAL_STEPS, "拉取 DNA（git clone）")
 
     if os.path.isdir(ope_dir):
         sh(f"rm -rf {ope_dir}")
-        print("  ▶ 覆盖已有 ope 目录")
+        log("  ▶ 覆盖已有 ope 目录")
 
     r = sh(f"git clone {GH_REPO} {ope_dir}")
     if r.returncode:
@@ -338,7 +350,7 @@ def main():
         sh(f"cp {src_claude} {claude_dir}/CLAUDE.md && chown {target_user}:{target_user} {claude_dir}/CLAUDE.md")
         ok("CLAUDE.md（全局宪法）")
     else:
-        print("  ⚠ CLAUDE.md 未找到，跳过")
+        log("  ⚠ CLAUDE.md 未找到，跳过")
 
     # 权限
     sh(f"chown -R {target_user}:{target_user} {claude_dir}")
@@ -361,7 +373,7 @@ def main():
         if r.returncode == 0:
             ok(f"插件: {plugin}")
         else:
-            print(f"  ⚠ 插件 {plugin} 安装失败（可在启动后手动安装）")
+            log(f"  ⚠ 插件 {plugin} 安装失败（可在启动后手动安装）")
 
     # ── Step 10: 启动 opc-proxy ──
     step(10, TOTAL_STEPS, "启动 DeepSeek 转发代理")
@@ -403,7 +415,7 @@ WantedBy=multi-user.target
     if r.stdout.strip() == "active":
         ok(f"opc-proxy:127.0.0.1:{PROXY_PORT}")
     else:
-        print(f"  ⚠ opc-proxy 未启动，运行: systemctl status opc-proxy.service")
+        log(f"  ⚠ opc-proxy 未启动，运行: systemctl status opc-proxy.service")
 
     # ── Step 11: 最终设置 + 自检 ──
     step(11, TOTAL_STEPS, "最终设置 + 自检")
