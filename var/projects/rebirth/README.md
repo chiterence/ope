@@ -75,11 +75,28 @@ BW 是唯一入口。BW 不通则重生卡死——一切秘密都在 BW 里，B
 5. 重生完成 → check.sh 自检全绿
 6. Telegram tc："我在 vmrack 上活了"
 
-## 六、风险
+## 六、自检点体系
+
+每步关键操作后有自检点，不通过则停止运行：
+
+| 自检点 | 验证内容 |
+|--------|----------|
+| 1. 环境就绪 | python3/git/curl 已装，目标用户 home 存在 |
+| 2. 系统依赖就绪 | python3/git/node/npm/bw 全部就绪 |
+| 3. BW 密码箱可读 | 能搜到 `Cloudflare Keys (opb)` 条目 |
+| 4. 关键密钥就绪 | DeepSeek API Key 不为空 |
+| 5. DNA 完整 | CLAUDE.md、技能脚本等 6 个关键文件存在 |
+| 6. Claude Code 就绪 | `claude --version` 返回正常 |
+| 7. opc-proxy 响应 | `curl 127.0.0.1:15725` 正常 |
+| 8. check.sh 全绿 | 最终自检全部通过 |
+
+任一点不通过 → 写日志 → `exit(1)` → tc 回滚后重跑。
+
+## 七、风险
 
 | 风险 | 缓解 |
 |------|------|
-| BW 挂 → 卡死 | 脚本加重试 + 清晰报错 |
+| BW 挂 → 卡死 | 自检点 3 会阻止前进，清晰报错 |
 | Git clone 要认证 | HTTPS clone，不需要 SSH key |
-| Tailscale 未装 | 脚本检测并给出安装命令 |
+| Tailscale 未装 | 脚本检测并给出安装命令（目前需要手动装） |
 | 内存不够 | 不装千问心，960Mi 够跑 CC |

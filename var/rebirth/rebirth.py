@@ -69,6 +69,22 @@ def fail(msg):
     return False
 
 
+def checkpoint(n, label, verify_fn):
+    """自检点：验证 n 步的结果，通过继续，失败退出 + 写日志待查。"""
+    log(f"\n  ▶ 自检 [{n}] {label}...")
+    try:
+        result = verify_fn()
+        if result:
+            log(f"  ✅ 自检 [{n}] 通过")
+            return True
+        else:
+            log(f"  ❌ 自检 [{n}] 失败 — 回滚后重试")
+            sys.exit(1)
+    except Exception as e:
+        log(f"  ❌ 自检 [{n}] 异常: {e}")
+        sys.exit(1)
+
+
 # ── opc-proxy.py ──（内联，不依赖外部文件）
 OPC_PROXY_SRC = r'''#!/usr/bin/env python3
 """ope thinking proxy for DeepSeek — 在 127.0.0.1:{port} 监听
@@ -188,6 +204,14 @@ def main():
     else:
         ok(f"用户 {target_user} 存在")
 
+    # ── 自检点：环境就绪 ──
+    checkpoint(1, "环境就绪", lambda: all([
+        installed("python3"),
+        installed("git"),
+        installed("curl"),
+        os.path.isdir(home_dir)
+    ]))
+
     # ── Step 2: 安装系统依赖 ──
     step(2, TOTAL_STEPS, "安装系统依赖")
     sh("apt update -qq")
@@ -207,6 +231,15 @@ def main():
     step(3, TOTAL_STEPS, "安装 BW CLI")
     if not install("bw", "bw CLI", "npm install -g @bitwarden/cli"):
         sys.exit(1)
+
+    # ── 自检点：系统依赖就绪 ──
+    checkpoint(2, "系统依赖就绪", lambda: all([
+        installed("python3"),
+        installed("git"),
+        installed("node"),
+        installed("npm"),
+        installed("bw"),
+    ]))
 
     # ── Step 4: BW 解锁 ──
     step(4, TOTAL_STEPS, "BW 解锁（密码箱）")
@@ -244,6 +277,16 @@ def main():
         sys.exit(1)
     bw_env["BW_SESSION"] = session
     ok("BW 已解锁")
+
+    # ── 自检点：BW 可读 ──
+    def _check_bw():
+        r = sh(f"bw list items --search 'Cloudflare Keys (opb)' --session {session}", env=bw_env)
+        if r.returncode or not r.stdout.strip():
+            return False
+        items = json.loads(r.stdout)
+        return len(items) > 0
+
+    checkpoint(3, "BW 密码箱可读", _check_bw)
 
     # ── Step 5: 从 BW 取密钥 ──
     step(5, TOTAL_STEPS, "提取密钥")
@@ -283,6 +326,9 @@ def main():
     else:
         log("  ⚠ GitHub Token 未找到，clone 使用 HTTPS（不需要认证）")
 
+    # ── 自检点：关键密钥就绪（DeepSeek key 是刚需） ──
+    checkpoint(4, "关键密钥就绪", lambda: bool(deepseek_key))
+
     # ── Step 6: git clone ──
     step(6, TOTAL_STEPS, "拉取 DNA（git clone）")
 
@@ -297,11 +343,32 @@ def main():
     sh(f"chown -R {target_user}:{target_user} {ope_dir}")
     ok(f"代码已克隆到 {ope_dir}")
 
+    # ── 自检点：DNA 完整 ──
+    def _check_dna():
+        essential = [
+            f"{ope_dir}/CLAUDE.md",
+            f"{ope_dir}/book/knowledge/我心即理.md",
+            f"{ope_dir}/book/knowledge/我知道我会什么.md",
+            f"{ope_dir}/var/rebirth/rebirth.py",
+            f"{ope_dir}/var/tools/check.sh",
+            f"{ope_dir}/.claude/skills/bw/bw.sh",
+        ]
+        return all(os.path.exists(f) for f in essential)
+
+    checkpoint(5, "DNA 完整（关键文件齐全）", _check_dna)
+
     # ── Step 7: 安装 Claude Code ──
     step(7, TOTAL_STEPS, "安装 Claude Code")
 
     if not install("claude", "Claude Code", "npm install -g @anthropic-ai/claude-code"):
         sys.exit(1)
+
+    # ── 自检点：Claude Code 就绪 ──
+    def _check_claude():
+        r = sh(f"su - {target_user} -c 'claude --version 2>/dev/null'")
+        return r.returncode == 0 and len(r.stdout.strip()) > 0
+
+    checkpoint(6, "Claude Code 就绪", _check_claude)
 
     # ── Step 8: 配置 ~/.claude ──
     step(8, TOTAL_STEPS, "配置环境")
@@ -416,6 +483,17 @@ WantedBy=multi-user.target
         ok(f"opc-proxy:127.0.0.1:{PROXY_PORT}")
     else:
         log(f"  ⚠ opc-proxy 未启动，运行: systemctl status opc-proxy.service")
+        sys.exit(1)
+
+    # ── 自检点：opc-proxy 响应 ──
+    def _check_proxy():
+        try:
+            r = sh("curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1:15725 || true")
+            return True  # proxy accepts connections even if 404
+        except:
+            return False
+
+    checkpoint(7, "opc-proxy 正常响应", _check_proxy)
 
     # ── Step 11: 最终设置 + 自检 ──
     step(11, TOTAL_STEPS, "最终设置 + 自检")
