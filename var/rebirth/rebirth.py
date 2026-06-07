@@ -147,6 +147,7 @@ def main():
     parser.add_argument("--bw-clientid", default="", help="BW_CLIENTID")
     parser.add_argument("--bw-clientsecret", default="", help="BW_CLIENTSECRET")
     parser.add_argument("--bw-password", default="", help="BW_PASSWORD")
+    parser.add_argument("--tg-token", default="", help="Telegram bot token（可选）")
     parser.add_argument("--yes", action="store_true", help="跳过确认")
     args = parser.parse_args()
 
@@ -205,9 +206,9 @@ def main():
         ok(f"用户 {target_user} 存在")
 
     # ── 自检点：环境就绪 ──
+    # 注意：git/curl 在 step 2 才装，这里只检查已经存在的条件
     checkpoint(1, "环境就绪", lambda: all([
         installed("python3"),
-        installed("git"),
         installed("curl"),
         os.path.isdir(home_dir)
     ]))
@@ -434,8 +435,19 @@ def main():
     # ── Step 9: 安装 MCP 插件 ──
     step(9, TOTAL_STEPS, "安装 MCP 插件")
 
+    # 先配 marketplace，再装插件
+    for attempt in range(3):
+        r = sh(f"su - {target_user} -c 'claude plugin marketplace add https://github.com/anthropics/claude-plugins-official 2>/dev/null'", timeout=60)
+        if r.returncode == 0:
+            ok("marketplace: claude-plugins-official")
+            break
+        elif "already exists" in r.stderr or "already" in r.stdout:
+            ok("marketplace: claude-plugins-official（已存在）")
+            break
+        time.sleep(2)
+
     for plugin in ["telegram@claude-plugins-official", "github@claude-plugins-official"]:
-        r = sh(f"su - {target_user} -c 'claude plugins install {plugin} 2>/dev/null'", timeout=30)
+        r = sh(f"su - {target_user} -c 'claude plugins install {plugin} 2>/dev/null'", timeout=60)
         if r.returncode == 0:
             ok(f"插件: {plugin}")
         else:
@@ -498,18 +510,37 @@ WantedBy=multi-user.target
     step(11, TOTAL_STEPS, "最终设置 + 自检")
 
     # 技能脚本执行权限
-    for f in ["var/tools/bw.sh", "var/tools/check.sh", "oe.sh", "or.sh", "opc-proxy.py"]:
+    for f in ["oe.sh", "or.sh", "opc-proxy.py", ".claude/skills/bw/bw.sh", ".claude/skills/channel/set-channel.sh"]:
         fp = f"{ope_dir}/{f}"
         if os.path.exists(fp):
             os.chmod(fp, 0o755)
+        else:
+            log(f"  ⚠ {f} 不在 git 中，跳过")
     ok("脚本权限")
 
-    # 运行自检
-    print("\n" + "=" * 50)
-    print("  自检")
-    print("=" * 50)
-    sh(f"su - {target_user} -c 'cd {ope_dir} && bash var/tools/check.sh'")
-    print("=" * 50)
+    # 运行自检（check.sh 若缺失则跳过）
+    check_path = f"{ope_dir}/var/tools/check.sh"
+    if os.path.exists(check_path):
+        print("\n" + "=" * 50)
+        print("  自检")
+        print("=" * 50)
+        sh(f"su - {target_user} -c 'cd {ope_dir} && bash var/tools/check.sh'")
+        print("=" * 50)
+    else:
+        log("  ⚠ var/tools/check.sh 不在 git 中，跳过自检（启动 oe.sh 后手动运行）")
+
+    # Telegram token（可选）
+    tg_token = args.tg_token
+    if tg_token:
+        tg_dir = f"{home_dir}/.claude/channels/telegram"
+        os.makedirs(tg_dir, exist_ok=True)
+        with open(f"{tg_dir}/.env", "w") as f:
+            f.write(f"TELEGRAM_BOT_TOKEN={tg_token}\n")
+        os.chmod(f"{tg_dir}/.env", 0o600)
+        sh(f"chown -R {target_user}:{target_user} {tg_dir}")
+        ok("Telegram bot token 已配置")
+    else:
+        log("  ⚠ --tg-token 未提供，Telegram 需启动后手动配置")
 
     # ── 完成 ──
     print(f"""
