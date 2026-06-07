@@ -1,6 +1,10 @@
 book/diary/
-.claude/
+.claude/*
+!.claude/skills
+!.claude/skills/**
 .session-id
 tmp/
 *.log
 /tmp/
+oe2
+or2
