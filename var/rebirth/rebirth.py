@@ -393,9 +393,6 @@ def main():
             "ANTHROPIC_BASE_URL": f"http://127.0.0.1:{PROXY_PORT}",
             "ANTHROPIC_AUTH_TOKEN": "PROXY_MANAGED",
             "ANTHROPIC_MODEL": "DeepSeek-V4-flash",
-            "BW_CLIENTID": bw_clientid,
-            "BW_CLIENTSECRET": bw_clientsecret,
-            "BW_PASSWORD": bw_password,
         },
         "enabledPlugins": {
             "telegram@claude-plugins-official": True,
@@ -425,6 +422,19 @@ def main():
     with open(f"{claude_dir}/settings.json", "w") as f:
         json.dump(settings, f, indent=2)
     ok("settings.json")
+
+    # 创建 settings.local.json（BW 凭据，不入 git）
+    local_settings = {
+        "env": {
+            "BW_CLIENTID": bw_clientid,
+            "BW_CLIENTSECRET": bw_clientsecret,
+            "BW_PASSWORD": bw_password,
+        }
+    }
+    with open(f"{claude_dir}/settings.local.json", "w") as f:
+        json.dump(local_settings, f, indent=2)
+    os.chmod(f"{claude_dir}/settings.local.json", 0o600)
+    ok("settings.local.json（BW 凭据）")
 
     # 复制 CLAUDE.md
     src_claude = f"{ope_dir}/CLAUDE.md"
