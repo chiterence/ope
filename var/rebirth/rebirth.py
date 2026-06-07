@@ -350,7 +350,6 @@ def main():
             f"{ope_dir}/book/knowledge/我心即理.md",
             f"{ope_dir}/book/knowledge/我知道我会什么.md",
             f"{ope_dir}/var/rebirth/rebirth.py",
-            f"{ope_dir}/var/tools/check.sh",
             f"{ope_dir}/.claude/skills/bw/bw.sh",
         ]
         return all(os.path.exists(f) for f in essential)
