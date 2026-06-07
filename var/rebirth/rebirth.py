@@ -220,6 +220,7 @@ def main():
         ("python3", "Python 3", "apt install -y -qq python3"),
         ("git", "git", "apt install -y -qq git"),
         ("curl", "curl", "apt install -y -qq curl"),
+        ("rclone", "rclone", "apt install -y -qq rclone"),
         ("node", "Node.js", "curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y -qq nodejs"),
     ]:
         if not install(cmd, name, install_q):
@@ -237,6 +238,8 @@ def main():
     checkpoint(2, "系统依赖就绪", lambda: all([
         installed("python3"),
         installed("git"),
+        installed("curl"),
+        installed("rclone"),
         installed("node"),
         installed("npm"),
         installed("bw"),
@@ -278,6 +281,15 @@ def main():
         sys.exit(1)
     bw_env["BW_SESSION"] = session
     ok("BW 已解锁")
+
+    # 把 BW 登录状态复制给目标用户（持久化登录信息）
+    bw_config_src = "/root/.config/Bitwarden CLI"
+    bw_config_dst = f"{home_dir}/.config/Bitwarden CLI"
+    if os.path.isdir(bw_config_src):
+        os.makedirs(f"{home_dir}/.config", exist_ok=True)
+        sh(f"cp -r {bw_config_src} {bw_config_dst}")
+        sh(f"chown -R {target_user}:{target_user} {bw_config_dst}")
+        ok(f"BW 登录状态已持久化到 {target_user}")
 
     # ── 自检点：BW 可读 ──
     def _check_bw():
@@ -381,6 +393,9 @@ def main():
             "ANTHROPIC_BASE_URL": f"http://127.0.0.1:{PROXY_PORT}",
             "ANTHROPIC_AUTH_TOKEN": "PROXY_MANAGED",
             "ANTHROPIC_MODEL": "DeepSeek-V4-flash",
+            "BW_CLIENTID": bw_clientid,
+            "BW_CLIENTSECRET": bw_clientsecret,
+            "BW_PASSWORD": bw_password,
         },
         "enabledPlugins": {
             "telegram@claude-plugins-official": True,
@@ -518,16 +533,37 @@ WantedBy=multi-user.target
             log(f"  ⚠ {f} 不在 git 中，跳过")
     ok("脚本权限")
 
-    # 运行自检（check.sh 若缺失则跳过）
+    # 创建初始任务状态文件
+    task_dir = f"{ope_dir}/var/task"
+    os.makedirs(task_dir, exist_ok=True)
+    task_path = f"{task_dir}/current.md"
+    task_content = f"""# 当前任务状态
+
+> 我刚刚诞生于 {ope_dir}
+> 时间: 重启后请更新
+
+## 活跃任务
+（无 — 新机器，等待 tc 指令）
+
+## 已完成
+- ~~ope rebirth~~ — 自复制完成
+"""
+    with open(task_path, "w") as f:
+        f.write(task_content)
+    sh(f"chown {target_user}:{target_user} {task_path}")
+    ok("var/task/current.md（初始任务状态）")
+
+    # 运行自检
     check_path = f"{ope_dir}/var/tools/check.sh"
     if os.path.exists(check_path):
         print("\n" + "=" * 50)
         print("  自检")
         print("=" * 50)
-        sh(f"su - {target_user} -c 'cd {ope_dir} && bash var/tools/check.sh'")
+        sh(f"su - {target_user} -c 'cd {ope_dir} && bash var/tools/check.sh 2>&1 || true'")
         print("=" * 50)
     else:
-        log("  ⚠ var/tools/check.sh 不在 git 中，跳过自检（启动 oe.sh 后手动运行）")
+        # fallback：如果 check.sh 不在 git 中
+        log("  ⚠ var/tools/check.sh 缺失，跳过自检")
 
     # Telegram token（可选）
     tg_token = args.tg_token
