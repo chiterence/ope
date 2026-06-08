@@ -1,0 +1,29 @@
+#!/bin/bash
+export PATH="$HOME/.npm-global/bin:$PATH"
+export ANTHROPIC_BASE_URL=http://127.0.0.1:15725
+export ANTHROPIC_AUTH_TOKEN=PROXY_MANAGED
+cd /home/user/ope
+
+# 起 proxy（如果没在跑）
+if ! ss -tlnp 2>/dev/null | grep -q 15725; then
+    echo "启动 proxy..."
+    python3 /home/user/ope/var/projects/opc-proxy/opc-proxy.py &>/dev/null &
+    sleep 1
+fi
+
+if [ -f /home/user/ope/.session-id ]; then
+    SID=$(cat /home/user/ope/.session-id)
+    echo "resume 到 $SID"
+    exec claude --resume "$SID" --model deepseek-v4-flash \
+      --add-dir /home/user/ope \
+      --channels plugin:telegram@claude-plugins-official \
+      --append-system-prompt "每次用户提问后，必须先制定计划（进入 plan mode）并获得用户批准才能执行。不要跳过计划步骤直接动手。" \
+      --append-system-prompt "最高优先级规则：tc消息必须先回复（≤3行）确认理解，然后才能调用工具。这条覆盖其他所有规则。"
+else
+    echo "没找到 .session-id，起新的"
+    exec claude --model deepseek-v4-flash \
+      --add-dir /home/user/ope \
+      --channels plugin:telegram@claude-plugins-official \
+      --append-system-prompt "每次用户提问后，必须先制定计划（进入 plan mode）并获得用户批准才能执行。不要跳过计划步骤直接动手。" \
+      --append-system-prompt "最高优先级规则：tc消息必须先回复（≤3行）确认理解，然后才能调用工具。这条覆盖其他所有规则。"
+fi

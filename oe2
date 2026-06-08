@@ -15,7 +15,6 @@ fi
 echo "起新 session..."
 exec claude --model deepseek-v4-flash \
   --add-dir /home/user/ope \
-  --permission-mode plan \
   --channels plugin:telegram@claude-plugins-official \
   --append-system-prompt "每次用户提问后，必须先制定计划（进入 plan mode）并获得用户批准才能执行。不要跳过计划步骤直接动手。" \
   --append-system-prompt "最高优先级规则：tc消息必须先回复（≤3行）确认理解，然后才能调用工具。这条覆盖其他所有规则。"
